@@ -109,5 +109,42 @@ function renderTasks() {
     });
 }
 
+// --- CRUD Операції ---
+// POST: Додавання завдання
+taskForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = taskInput.value.trim();
+    if (!title) return;
+
+    showLoader();
+    clearError();
+    try {
+        const response = await fetch(`${API_URL}/todos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+            body: JSON.stringify({ title, completed: false, userId: 1 })
+        });
+
+        if (!response.ok) throw new Error('Помилка сервера при створенні.');
+
+        const newTask = await response.json();
+
+        // Оскільки JSONPlaceholder повертає завжди id: 201, згенеруємо унікальний для DOM
+        newTask.id = tasksState.length ? Math.max(...tasksState.map(t => t.id)) + 1 : 1;
+
+        tasksState.unshift(newTask); // Додаємо на початок
+        renderTasks();
+
+        // Очищення форми
+        taskForm.reset();
+        addBtn.disabled = true;
+    } catch (error) {
+        showError('Не вдалося створити завдання.');
+        console.error(error);
+    } finally {
+        hideLoader();
+    }
+});
+
 // Старт додатку
 loadInitialData();
