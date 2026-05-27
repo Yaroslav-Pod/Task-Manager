@@ -7,6 +7,9 @@ const taskList = document.getElementById('task-list');
 const loader = document.getElementById('loader');
 const errorMessage = document.getElementById('error-message');
 const userInfo = document.getElementById('user-info');
+const taskForm = document.getElementById('task-form');
+const taskInput = document.getElementById('task-input');
+const addBtn = document.getElementById('add-btn');
 
 // --- UX / Стан завантаження та помилок ---
 function showLoader() { loader.classList.remove('hidden'); }
@@ -20,6 +23,19 @@ function clearError() {
     errorMessage.textContent = '';
     errorMessage.classList.add('hidden');
 }
+
+// Блокування кнопки додавання, якщо інпут порожній
+taskInput.addEventListener('input', () => {
+    addBtn.disabled = !taskInput.value.trim();
+});
+
+// Обробка клавіші Escape в інпуті
+taskInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        taskInput.value = '';
+        addBtn.disabled = true;
+    }
+});
 
 // --- Ініціалізація: Паралельне завантаження даних (Promise.all) ---
 async function loadInitialData() {
