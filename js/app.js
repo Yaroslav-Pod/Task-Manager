@@ -2,6 +2,7 @@
 const API_URL = 'https://jsonplaceholder.typicode.com';
 let tasksState = [];
 let currentFilter = 'all';
+let searchQuery = '';
 
 // DOM Елементи
 const taskList = document.getElementById('task-list');
@@ -13,6 +14,7 @@ const taskInput = document.getElementById('task-input');
 const addBtn = document.getElementById('add-btn');
 const filterButtons = document.querySelectorAll('.filter-btn');
 const activeCountEl = document.getElementById('active-count');
+const searchInput = document.getElementById('search-input');
 
 // --- UX / Стан завантаження та помилок ---
 function showLoader() { loader.classList.remove('hidden'); }
@@ -106,13 +108,15 @@ function createTaskElement(task) {
 }
 
 function renderTasks() {
-    taskList.innerHTML = '';
+    taskList.innerHTML = ''; // Очищуємо список перед рендером
 
-    // Фільтрація
+    // Фільтрація та пошук
     const filteredTasks = tasksState.filter(task => {
-        if (currentFilter === 'active') return !task.completed;
-        if (currentFilter === 'completed') return task.completed;
-        return true;
+        const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
+
+        if (currentFilter === 'active') return matchesSearch && !task.completed;
+        if (currentFilter === 'completed') return matchesSearch && task.completed;
+        return matchesSearch;
     });
 
     // Додавання в DOM
@@ -226,6 +230,23 @@ filterButtons.forEach(btn => {
         renderTasks();
     });
 });
+
+// --- Debounce функція для пошуку ---
+function debounce(func, delay) {
+    let timeoutId;
+    return function (...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            func.apply(this, args);
+        }, delay);
+    };
+}
+
+// Пошук з debounce затримкою у 300мс
+searchInput.addEventListener('input', debounce((e) => {
+    searchQuery = e.target.value;
+    renderTasks();
+}, 300));
 
 // Старт додатку
 loadInitialData();
