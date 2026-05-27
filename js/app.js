@@ -1,6 +1,7 @@
 // Константи та стан додатку
 const API_URL = 'https://jsonplaceholder.typicode.com';
 let tasksState = [];
+let currentFilter = 'all';
 
 // DOM Елементи
 const taskList = document.getElementById('task-list');
@@ -10,6 +11,8 @@ const userInfo = document.getElementById('user-info');
 const taskForm = document.getElementById('task-form');
 const taskInput = document.getElementById('task-input');
 const addBtn = document.getElementById('add-btn');
+const filterButtons = document.querySelectorAll('.filter-btn');
+const activeCountEl = document.getElementById('active-count');
 
 // --- UX / Стан завантаження та помилок ---
 function showLoader() { loader.classList.remove('hidden'); }
@@ -104,9 +107,22 @@ function createTaskElement(task) {
 
 function renderTasks() {
     taskList.innerHTML = '';
-    tasksState.forEach(task => {
+
+    // Фільтрація
+    const filteredTasks = tasksState.filter(task => {
+        if (currentFilter === 'active') return !task.completed;
+        if (currentFilter === 'completed') return task.completed;
+        return true;
+    });
+
+    // Додавання в DOM
+    filteredTasks.forEach(task => {
         taskList.append(createTaskElement(task));
     });
+
+    // Оновлення лічильника активних задач
+    const activeCount = tasksState.filter(t => !t.completed).length;
+    activeCountEl.textContent = activeCount;
 }
 
 // --- CRUD Операції ---
@@ -144,6 +160,71 @@ taskForm.addEventListener('submit', async (e) => {
     } finally {
         hideLoader();
     }
+});
+
+// Делегування подій на списку (Клік по чекбоксу / видаленню)
+taskList.addEventListener('click', async (e) => {
+    const target = e.target;
+    const taskItem = target.closest('.task-item');
+    if (!taskItem) return;
+
+    const taskId = Number(taskItem.dataset.id);
+
+    // DELETE: Видалення завдання
+    if (target.classList.contains('task-delete')) {
+        showLoader();
+        clearError();
+        try {
+            const response = await fetch(`${API_URL}/todos/${taskId}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Помилка при видаленні.');
+
+            tasksState = tasksState.filter(t => t.id !== taskId);
+            renderTasks();
+        } catch (error) {
+            showError('Не вдалося видалити завдання.');
+            console.error(error);
+        } finally {
+            hideLoader();
+        }
+    }
+
+    // PATCH: Зміна статусу виконання
+    if (target.classList.contains('task-checkbox')) {
+        const isCompleted = target.checked;
+        showLoader();
+        clearError();
+        try {
+            const response = await fetch(`${API_URL}/todos/${taskId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+                body: JSON.stringify({ completed: isCompleted })
+            });
+
+            if (!response.ok) throw new Error('Помилка при оновленні.');
+
+            const updated = tasksState.find(t => t.id === taskId);
+            if (updated) updated.completed = isCompleted;
+            renderTasks();
+        } catch (error) {
+            showError('Не вдалося оновити статус завдання.');
+            // Повертаємо чекбокс назад у разі помилки
+            target.checked = !isCompleted;
+            console.error(error);
+        } finally {
+            hideLoader();
+        }
+    }
+});
+
+// --- Фільтрація (Перемикання вкладок) ---
+filterButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        filterButtons.forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+
+        currentFilter = e.target.dataset.filter;
+        renderTasks();
+    });
 });
 
 // Старт додатку
